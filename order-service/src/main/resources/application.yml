@@ -3,4 +3,4 @@ grpc:
     order-service:
       address: static://localhost:9091
       negotiationType: plaintext
-server.port: 8081
+server.port: 8080
