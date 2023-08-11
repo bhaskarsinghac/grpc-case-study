@@ -1,0 +1,49 @@
+services:
+  otel-collector:
+    image: otel/opentelemetry-collector:0.47.0
+    command: [ "--config=/etc/otel-collector-config.yaml" ]
+    container_name: otel-collector
+    volumes:
+      - ./otel-config.yaml:/etc/otel-collector-config.yaml
+    ports:
+      - "1888:1888"   # pprof extension
+      - "13133:13133" # health_check extension
+      - "4317:4317"   # OTLP gRPC receiver
+      - "55670:55679" # zpages extension
+  tempo:
+    image: grafana/tempo:1.5.0
+    command: [ "-search.enabled=true", "-config.file=/etc/tempo.yaml" ]
+    container_name: tempo
+    hostname: tempo
+    volumes:
+      - ./tempo-config.yaml:/etc/tempo.yaml
+      - ./tempo-overrides.yaml:/etc/overrides.yaml
+      - ./tempo-data:/tmp/tempo
+    ports:
+      - "3200:3200"
+      - "2317:2317"
+    healthcheck:
+      interval: 5s
+      retries: 10
+      test: wget --no-verbose --tries=1 --spider http://localhost:3200/status || exit 1
+
+  grafana:
+    image: grafana/grafana:9.2.2
+    container_name: grafana
+    hostname: grafana
+    depends_on:
+      tempo:
+        condition: service_healthy
+    volumes:
+      - ./grafana-bootstrap.ini:/etc/grafana/grafana.ini
+      - ./grafana-datasources.yaml:/etc/grafana/provisioning/datasources/datasources.yaml
+    environment:
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+      - GF_AUTH_DISABLE_LOGIN_FORM=true
+    ports:
+      - "3000:3000"
+    healthcheck:
+      interval: 5s
+      retries: 10
+      test: wget --no-verbose --tries=1 --spider http://localhost:3000 || exit 1
