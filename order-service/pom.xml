@@ -33,6 +33,7 @@
             <groupId>com.acuver.kpl</groupId>
             <artifactId>common-contracts</artifactId>
             <version>0.0.1-SNAPSHOT</version>
+            <scope>compile</scope>
         </dependency>
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
