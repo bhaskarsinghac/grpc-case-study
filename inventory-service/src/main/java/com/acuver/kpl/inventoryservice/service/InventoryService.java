@@ -2,14 +2,19 @@ package com.acuver.kpl.inventoryservice.service;
 
 import com.acuver.kpl.inventory_components.InventoryServiceGrpc;
 import com.acuver.kpl.inventory_components.ReserveInventoryRequest;
+import com.acuver.kpl.inventory_components.ReserveInventory;
 import com.acuver.kpl.inventory_components.ReserveInventoryResponse;
+import com.acuver.kpl.inventory_components.ReserveInventoryListResponse;
+import com.acuver.kpl.inventoryservice.model.Inventory;
 import com.acuver.kpl.inventoryservice.repository.InventoryRepository;
 import io.grpc.Status;
 import io.grpc.stub.StreamObserver;
 import lombok.extern.slf4j.Slf4j;
 import net.devh.boot.grpc.server.service.GrpcService;
+import reactor.core.publisher.Mono;
 
 import java.util.Arrays;
+import java.util.Optional;
 
 @GrpcService
 @Slf4j
@@ -22,23 +27,41 @@ public class InventoryService extends InventoryServiceGrpc.InventoryServiceImplB
     }
 
     @Override
-    public void reserveInventory(ReserveInventoryRequest request, StreamObserver<ReserveInventoryResponse> responseObserver) {
-
+    public void reserveInventory(ReserveInventoryRequest request, StreamObserver<ReserveInventoryListResponse> responseObserver) {
         log.info("Inside reserveInventory");
-        ReserveInventoryResponse response;
 
+        var response = ReserveInventoryListResponse.newBuilder();
         try {
-            response = ReserveInventoryResponse.newBuilder()
-                    .setProductId(request.getProductId())
-                    .setSuccess(true)
-                    .build();
+            for(ReserveInventory req: request.getInventoryList()){
+                Optional<Inventory> availableInventoryOptional = inventoryRepository.findByProductId(req.getProductId()).blockOptional();
+                if(availableInventoryOptional.isPresent() && availableInventoryOptional.get().getAvailableQuantity() >= req.getQuantity()){
+                    Inventory availableInventory = availableInventoryOptional.get();
+                        availableInventory.setAvailableQuantity(availableInventory.getAvailableQuantity()-req.getQuantity());
+                        availableInventory.setReservedQuantity(availableInventory.getReservedQuantity()+req.getQuantity());
+                        inventoryRepository.save(availableInventory).subscribe();
+                        var res = ReserveInventoryResponse.newBuilder()
+                                .setProductId(req.getProductId())
+                                .setOrderId(req.getOrderId())
+                                .setSuccess(true)
+                                .build();
+                        response.addInvResponse(res);
+                } else{
+                    var res = ReserveInventoryResponse.newBuilder()
+                            .setProductId(req.getProductId())
+                            .setOrderId(req.getOrderId())
+                            .setSuccess(false)
+                            .build();
+                    response.addInvResponse(res);
+                }
+            }
+
         } catch (Exception e) {
             responseObserver.onError(Status.UNKNOWN
                     .withDescription(Arrays.toString(e.getStackTrace()))
                     .asRuntimeException());
             return;
         }
-        responseObserver.onNext(response);
+        responseObserver.onNext(response.build());
         responseObserver.onCompleted();
     }
 }
