@@ -54,6 +54,7 @@ public class OrderService {
             @Override
             public void onFailure(Throwable t) {
                 log.warn("Inside Failure");
+                t.printStackTrace();
                 monoSink.error(new Exception(t.getMessage()));
             }
         }, executor));
