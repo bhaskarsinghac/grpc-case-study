@@ -1,9 +1,11 @@
 package com.acuver.kpl.orderservice.model;
 
 import lombok.*;
+import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -22,12 +24,13 @@ public class Order {
     private String state;
     private String zipcode;
     private String country;
-    private Integer mobile;
+    private String mobile;
     private String email;
     private String paymentMethod;
     @Id
     private String sellerOrderId;   // uniquely identify order
-    //    private Date createdOn;
+    @CreatedDate
+    private LocalDateTime createdAt = LocalDateTime.now();
 //    private Date lastModifiedOn;
     private Integer shippingCharge;
     //    private Date orderDate;
