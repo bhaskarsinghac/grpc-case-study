@@ -4,9 +4,9 @@ grpc:
   server:
     port: 9091
 
-spring.sleuth.otel.exporter.otlp.endpoint: http://0.0.0.0:4317
-spring.sleuth.otel.config.trace-id-ratio-based: 1.0
-spring.application.name: INVENTORY-SERVICE
+#spring.sleuth.otel.exporter.otlp.endpoint: http://0.0.0.0:4317
+#spring.sleuth.otel.config.trace-id-ratio-based: 1.0
+#spring.application.name: INVENTORY-SERVICE
 
 spring:
   data:

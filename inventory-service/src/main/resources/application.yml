@@ -6,13 +6,13 @@ grpc:
 
 spring.profiles.active: default
 
-spring.sleuth.otel.exporter.otlp.endpoint: http://0.0.0.0:4317
-spring.sleuth.otel.config.trace-id-ratio-based: 1.0
-spring.application.name: INVENTORY-SERVICE
+#spring.sleuth.otel.exporter.otlp.endpoint: http://0.0.0.0:4317
+#spring.sleuth.otel.config.trace-id-ratio-based: 1.0
+#spring.application.name: INVENTORY-SERVICE
 
 spring:
   data:
     mongodb:
       database: inventory
-      host: localhost
+      host: mongo-db
       port: 27017
