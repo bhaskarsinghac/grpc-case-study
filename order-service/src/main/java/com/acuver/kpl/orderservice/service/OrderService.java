@@ -1,8 +1,8 @@
 package com.acuver.kpl.orderservice.service;
 
 import com.acuver.kpl.inventory_components.*;
-import com.acuver.kpl.orderservice.model.Order;
 import com.acuver.kpl.orderservice.model.CreateOrderResponse;
+import com.acuver.kpl.orderservice.model.Order;
 import com.acuver.kpl.orderservice.repository.OrderRepository;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
@@ -13,12 +13,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 @Service
 @Slf4j
@@ -31,11 +29,11 @@ public class OrderService {
     OrderRepository orderRepository;
     final ExecutorService executor = Executors.newCachedThreadPool();
 
-    public Mono<CreateOrderResponse> createOrder(Order req) {
-        orderRepository.save(req).subscribe();
+    public Mono<CreateOrderResponse> createOrder(Order createOrderReq) {
+        orderRepository.save(createOrderReq).subscribe();
 
         var invReserveReqBuilder = ReserveInventoryRequest.newBuilder();
-        for(Order.OrderLine orderLine: req.getOrderLineEntries() ){
+        for (Order.OrderLine orderLine : createOrderReq.getOrderLineEntries()) {
             var orderLineObj = ReserveInventory.newBuilder()
                     .setProductId(orderLine.getSku())
                     .setOrderId(orderLine.getSellerOrderId())
@@ -46,44 +44,49 @@ public class OrderService {
         var invReserveReq = invReserveReqBuilder.build();
 
         var invReserveResFuture = futureStub
-                .withDeadlineAfter(10, TimeUnit.SECONDS).reserveInventory(invReserveReq);
+                .withDeadlineAfter(25, TimeUnit.SECONDS).reserveInventory(invReserveReq);
 
         return Mono.create(monoSink -> Futures.addCallback(invReserveResFuture, new FutureCallback<>() {
 
             @Override
             public void onSuccess(@NullableDecl ReserveInventoryListResponse invReserveRes) {
                 log.warn("Inside Success");
+                AtomicInteger reservedCounter = new AtomicInteger();
                 try {
-                    orderRepository.findBySellerOrderId(invReserveRes.getInvResponse(0).getOrderId()).doOnSuccess(order ->{
-                        for(Order.OrderLine orderLine: order.getOrderLineEntries() ){
-                            for(ReserveInventoryResponse response: invReserveRes.getInvResponseList()){
-                                if(orderLine.getSku().equals(response.getProductId())){
-                                    if(response.getSuccess())
-                                        orderLine.setStatus("CONFIRMED");
-                                    else {
-                                        orderLine.setStatus("CANCELLED");
-                                        orderLine.setCancellationReason("Insufficient Inventory");
+                    Mono.just(createOrderReq).doOnSuccess(order -> {
+                                for (Order.OrderLine orderLine : order.getOrderLineEntries()) {
+                                    for (ReserveInventoryResponse response : invReserveRes.getInvResponseList()) {
+                                        if (orderLine.getSku().equals(response.getProductId())) {
+                                            if (response.getSuccess()) {
+                                                orderLine.setStatus("RESERVED");
+                                                reservedCounter.addAndGet(1);
+                                            } else {
+                                                orderLine.setStatus("CANCELLED");
+                                                orderLine.setCancellationReason("Insufficient Inventory");
+                                            }
+                                            break;
+                                        }
                                     }
-                                    break;
                                 }
-                            }
-                        }
-                        orderRepository.save(order).subscribe();
-                    }).doOnError(throwable -> log.error(throwable.getMessage()))
+//                                orderRepository.save(order).subscribe();
+                            }).doOnError(throwable -> log.error(throwable.getMessage()))
                             .subscribe();
 
-                    List<CreateOrderResponse.OrderLineRes> orderLineResList  = new ArrayList<>();
-                    for(ReserveInventoryResponse response: invReserveRes.getInvResponseList()){
-                        CreateOrderResponse.OrderLineRes orderLineRes = new CreateOrderResponse.OrderLineRes();
-                        orderLineRes.setProductId(response.getProductId());
-                        orderLineRes.setOrderId(response.getOrderId());
-                        orderLineRes.setStatus(response.getSuccess());
-                        orderLineResList.add(orderLineRes);
-
+                    CreateOrderResponse res = new CreateOrderResponse();
+                    res.setSellerOrderId(createOrderReq.getSellerOrderId());
+                    if (reservedCounter.get() == createOrderReq.getOrderLineEntries().size()) {
+                        res.setOrderStatus("CONFIRMED");
+                        res.setCancellationReason(null);
+                        monoSink.success(res);
+                        createOrderReq.setStatus("CONFIRMED");
+                        orderRepository.save(createOrderReq).subscribe();
+                    } else {
+                        res.setOrderStatus("CANCELLED");
+                        res.setCancellationReason("Unable to reserve inventory");
+                        monoSink.success(res);
+                        createOrderReq.setStatus("CANCELLED");
+                        orderRepository.save(createOrderReq).subscribe();
                     }
-                    CreateOrderResponse createOrderResponse = new CreateOrderResponse();
-                    createOrderResponse.setOrderLineResList(orderLineResList);
-                    monoSink.success(createOrderResponse);
                 } catch (Exception e) {
                     monoSink.error(e);
                 }

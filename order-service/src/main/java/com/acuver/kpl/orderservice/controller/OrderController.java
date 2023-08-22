@@ -1,7 +1,7 @@
 package com.acuver.kpl.orderservice.controller;
 
-import com.acuver.kpl.orderservice.model.Order;
 import com.acuver.kpl.orderservice.model.CreateOrderResponse;
+import com.acuver.kpl.orderservice.model.Order;
 import com.acuver.kpl.orderservice.service.OrderService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.PostMapping;

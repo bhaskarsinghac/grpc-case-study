@@ -1,24 +1,13 @@
 package com.acuver.kpl.orderservice.model;
 
-import lombok.Builder;
-import lombok.Data;
-import lombok.Getter;
-import lombok.Setter;
 
-import java.util.List;
+import lombok.Data;
 
 @Data
-//@Builder
 public class CreateOrderResponse {
 
-    private List<OrderLineRes> orderLineResList;
+    private String sellerOrderId;
+    private String orderStatus;
+    private String cancellationReason;
 
-
-    @Getter
-    @Setter
-    public static class OrderLineRes {
-        private String productId;
-        private String OrderId;
-        private Boolean status;
-    }
 }

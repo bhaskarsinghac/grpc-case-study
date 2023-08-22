@@ -25,11 +25,12 @@ public class Order {
     private Integer mobile;
     private String email;
     private String paymentMethod;
+    @Id
     private String sellerOrderId;   // uniquely identify order
-//    private Date createdOn;
+    //    private Date createdOn;
 //    private Date lastModifiedOn;
     private Integer shippingCharge;
-//    private Date orderDate;
+    //    private Date orderDate;
     private String sellerId;
     private String status;
     private String store;
@@ -41,12 +42,12 @@ public class Order {
         private Boolean onHold;
         private String orderLineId;
         private String sku;   // productId
-//        private Date invoiceDate;
+        //        private Date invoiceDate;
         private Integer lineFinalAmount;
         private String sellerOrderId;
         private String invoiceNumber;
         private Integer quantity;    // quantity
-//        private Date createdOn;
+        //        private Date createdOn;
         private String orderId;
         private Integer cancelledQuantity;
         private String status;  // status
