@@ -15,6 +15,7 @@ import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.MonoSink;
+import reactor.core.publisher.SignalType;
 
 import java.util.Map;
 import java.util.Objects;
@@ -63,7 +64,11 @@ public class OrderService {
                         .flatMap(order -> updaterOrderLineEntryStatus(Objects.requireNonNull(invReserveRes), reservedCounter, order))
                         .doOnSuccess(order -> updateOuterOrderStatus(reservedCounter, createOrderReq, monoSink))
                         .doOnError(t -> handleError(t, monoSink))
-                        .doFinally(signalType -> orderRepository.save(createOrderReq).subscribe()) // update db
+                        .doFinally(signalType -> {
+                            if (signalType == SignalType.ON_COMPLETE) {  // Check if it's successful
+                                orderRepository.save(createOrderReq).subscribe(); // Save only on success
+                            }
+                        })
                         .subscribe();
             }
 
