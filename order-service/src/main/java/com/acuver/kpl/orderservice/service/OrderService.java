@@ -61,8 +61,9 @@ public class OrderService {
                 AtomicInteger reservedCounter = new AtomicInteger();
                 Mono.just(createOrderReq)
                         .flatMap(order -> updaterOrderLineEntryStatus(Objects.requireNonNull(invReserveRes), reservedCounter, order))
-                        .doOnSuccess(order -> updateOuterStatus(reservedCounter, createOrderReq, monoSink))
+                        .doOnSuccess(order -> updateOuterOrderStatus(reservedCounter, createOrderReq, monoSink))
                         .doOnError(t -> handleError(t, monoSink))
+                        .doFinally(signalType -> orderRepository.save(createOrderReq).subscribe()) // update db
                         .subscribe();
             }
 
@@ -96,7 +97,7 @@ public class OrderService {
                         })).then(Mono.just(order));
     }
 
-    private void updateOuterStatus(AtomicInteger reservedCounter, Order createOrderReq, MonoSink<CreateOrderResponse> monoSink) {
+    private void updateOuterOrderStatus(AtomicInteger reservedCounter, Order createOrderReq, MonoSink<CreateOrderResponse> monoSink) {
         CreateOrderResponse res = new CreateOrderResponse();
         res.setSellerOrderId(createOrderReq.getSellerOrderId());
         if (reservedCounter.get() == createOrderReq.getOrderLineEntries().size()) {
@@ -108,27 +109,6 @@ public class OrderService {
             res.setCancellationReason("Unable to reserve inventory");
             createOrderReq.setStatus("CANCELLED");
         }
-        orderRepository.save(createOrderReq).subscribe();
         monoSink.success(res);
     }
-
-
-/*    private void processCreateOrderReq(ReserveInventoryListResponse invReserveRes, AtomicInteger reservedCounter, Order order) {
-
-        for (Order.OrderLine orderLine : order.getOrderLineEntries()) {
-            for (ReserveInventoryResponse response : invReserveRes.getInvResponseList()) {
-                if (orderLine.getSku().equals(response.getProductId())) {
-                    if (response.getSuccess()) {
-                        orderLine.setStatus("RESERVED");
-                        reservedCounter.addAndGet(1);
-                    } else {
-                        orderLine.setStatus("CANCELLED");
-                        orderLine.setCancellationReason("Insufficient Inventory");
-                    }
-                    break;
-                }
-            }
-        }
-    }*/
-
 }
