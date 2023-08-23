@@ -22,7 +22,7 @@ public class OrderController {
     }
 
     @PostMapping("/create")
-    public Mono<CreateOrderResponse> createOrder(@RequestBody Order request) {
+    public Mono<Object> createOrder(@RequestBody Order request) {
         log.info("inside api");
         return orderService.createOrder(request);
     }
