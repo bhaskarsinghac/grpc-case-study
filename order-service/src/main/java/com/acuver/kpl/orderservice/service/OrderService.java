@@ -79,27 +79,26 @@ public class OrderService {
         }, executor));
     }
 
-    private void handleError(Throwable t, MonoSink<CreateOrderResponse> monoSink) {
-        log.error("Inside doOnError");
-        monoSink.error(t);
-        t.printStackTrace();
-    }
-
     private Mono<Order> updaterOrderLineEntryStatus(ReserveInventoryListResponse invReserveRes, AtomicInteger reservedCounter, Order order) {
-
-        return Flux.fromIterable(order.getOrderLineEntries())
-                .flatMap(orderLine -> Mono.justOrEmpty(invReserveRes.getInvResponseList().stream()
-                                .filter(reserveResponse -> reserveResponse.getProductId().equals(orderLine.getSku()))
-                                .findFirst())
-                        .doOnNext(reserveResponse -> {
-                            if (reserveResponse.getSuccess()) {
-                                orderLine.setStatus("RESERVED");
-                                reservedCounter.incrementAndGet();
-                            } else {
-                                orderLine.setStatus("CANCELLED");
-                                orderLine.setCancellationReason("Insufficient Inventory");
+        return Flux.zip(Flux.fromIterable(order.getOrderLineEntries()),
+                        Flux.fromIterable(invReserveRes.getInvResponseList()),
+                        (orderLine, reserveResponse) -> {
+                            if (reserveResponse.getProductId().equals(orderLine.getSku())) {
+                                if (reserveResponse.getSuccess()) {
+                                    orderLine.setStatus("RESERVED");
+                                    reservedCounter.incrementAndGet();
+                                } else {
+                                    orderLine.setStatus("CANCELLED");
+                                    orderLine.setCancellationReason("Insufficient Inventory");
+                                }
                             }
-                        })).then(Mono.just(order));
+                            return orderLine;
+                        })
+                .collectList()
+                .flatMap(orderLines -> {
+                    order.setOrderLineEntries(orderLines);
+                    return Mono.just(order);
+                });
     }
 
     private void updateOuterOrderStatus(AtomicInteger reservedCounter, Order createOrderReq, MonoSink<CreateOrderResponse> monoSink) {
@@ -115,5 +114,11 @@ public class OrderService {
             createOrderReq.setStatus("CANCELLED");
         }
         monoSink.success(res);
+    }
+
+    private void handleError(Throwable t, MonoSink<CreateOrderResponse> monoSink) {
+        log.error("Inside doOnError");
+        monoSink.error(t);
+        t.printStackTrace();
     }
 }
