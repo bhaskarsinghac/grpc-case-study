@@ -57,7 +57,7 @@ public class OrderService {
         return Mono.create(monoSink -> {
 
                     ListenableFuture<ReserveInventoryListResponse> invReserveResFuture = futureStub
-                            .withDeadlineAfter(25, TimeUnit.SECONDS).reserveInventory(invReserveReq);
+                            .withDeadlineAfter(5, TimeUnit.SECONDS).reserveInventory(invReserveReq);
                     Futures.addCallback(invReserveResFuture, new FutureCallback<>() {
 
                         @Override
@@ -68,7 +68,7 @@ public class OrderService {
                             Mono.just(createOrderReq)
                                     .flatMap(order -> updaterOrderLineEntryStatus(Objects.requireNonNull(invReserveRes), reservedCounter, order))
                                     .doOnSuccess(order -> updateOuterOrderStatus(reservedCounter, createOrderReq, monoSink))
-                                    .doOnError(t -> handleError(t, monoSink))
+                                    .doOnError(t -> handleError(monoSink, new Exception("Error in OrderService", t)))
                                     .doFinally(signalType -> {
                                         if (signalType == SignalType.ON_COMPLETE) {  // Check if it's successful
                                             orderRepository.save(createOrderReq).subscribe(); // Save only on success
@@ -80,7 +80,7 @@ public class OrderService {
                         @Override
                         public void onFailure(@NullableDecl Throwable t) {
                             log.error("Inside onFailure");
-                            handleError(t, monoSink);
+                            handleError(monoSink, new Exception("Error while communicating with InventoryService", t));
                         }
 
                     }, executor);
@@ -128,8 +128,8 @@ public class OrderService {
         monoSink.success(res);
     }
 
-    private void handleError(Throwable t, MonoSink<Object> monoSink) {
-        monoSink.error(t);
-        t.printStackTrace();
+    private void handleError(MonoSink<Object> monoSink, Exception e) {
+        monoSink.error(e);
+        e.printStackTrace();
     }
 }
