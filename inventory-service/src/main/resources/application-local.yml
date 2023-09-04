@@ -2,6 +2,10 @@ server:
   port: 8081
 grpc:
   server:
+    security:
+      enabled: true
+      certificate-chain: file:/home/ubuntu/Documents/Github/newGRPC/grpc-case-study/common-contracts/src/main/ssl-tls/localhost.crt
+      private-key: file:/home/ubuntu/Documents/Github/newGRPC/grpc-case-study/common-contracts/src/main/ssl-tls/localhost.pem
     port: 9091
 
 #spring.sleuth.otel.exporter.otlp.endpoint: http://0.0.0.0:4317

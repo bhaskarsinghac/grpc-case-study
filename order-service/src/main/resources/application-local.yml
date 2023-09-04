@@ -2,7 +2,9 @@ grpc:
   client:
     order-service:
       address: static://localhost:9091
-      negotiationType: plaintext
+      negotiationType: TLS
+      security:
+        trust-cert-collection: file:/home/ubuntu/Documents/Github/newGRPC/grpc-case-study/common-contracts/src/main/ssl-tls/ca.cert.pem
 server.port: 8080
 
 #spring.sleuth.otel.exporter.otlp.endpoint: http://0.0.0.0:4317
