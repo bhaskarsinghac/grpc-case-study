@@ -2,6 +2,15 @@ syntax = "proto3";
 option java_multiple_files = true;
 package com.acuver.kpl.inventory_components;
 
+// Inventory Service
+
+service InventoryService {
+  rpc ReserveInventory(ReserveInventoryRequest) returns (ReserveInventoryListResponse);
+  rpc fetchInventoryStatus (Empty) returns (stream InventoryStatus);
+}
+
+// models for reserveInventory
+
 message ReserveInventoryRequest {
   repeated ReserveInventory inventory = 1;
 }
@@ -22,6 +31,11 @@ message ReserveInventoryResponse {
   string orderId = 3;
 }
 
-service InventoryService {
-  rpc ReserveInventory(ReserveInventoryRequest) returns (ReserveInventoryListResponse);
+// models for fetchInventoryStatus
+
+message InventoryStatus {
+  string productId = 1;
+  int32 availableQuantity = 2;
 }
+
+message Empty {}

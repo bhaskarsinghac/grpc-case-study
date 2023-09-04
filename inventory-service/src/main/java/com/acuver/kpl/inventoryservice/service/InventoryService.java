@@ -7,6 +7,7 @@ import io.grpc.Status;
 import io.grpc.stub.StreamObserver;
 import lombok.extern.slf4j.Slf4j;
 import net.devh.boot.grpc.server.service.GrpcService;
+import reactor.core.publisher.Mono;
 
 import java.util.Arrays;
 import java.util.Optional;
@@ -58,5 +59,19 @@ public class InventoryService extends InventoryServiceGrpc.InventoryServiceImplB
         }
         responseObserver.onNext(response.build());
         responseObserver.onCompleted();
+    }
+
+    @Override
+    public void fetchInventoryStatus(Empty request, StreamObserver<InventoryStatus> responseObserver) {
+
+        inventoryRepository.findAll()
+                .flatMap(inventory -> {
+                    var currentInvStatus = InventoryStatus.newBuilder()
+                                    .setProductId(inventory.getProductId())
+                                    .setAvailableQuantity(inventory.getAvailableQuantity())
+                                    .build();
+                            return Mono.just(currentInvStatus);
+                        })
+                .subscribe(responseObserver::onNext, responseObserver::onError, responseObserver::onCompleted);
     }
 }
