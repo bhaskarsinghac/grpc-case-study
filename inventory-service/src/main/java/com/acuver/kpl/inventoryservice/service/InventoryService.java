@@ -55,7 +55,7 @@ public class InventoryService extends InventoryServiceGrpc.InventoryServiceImplB
             responseObserver.onError(Status.UNKNOWN
                     .withDescription(Arrays.toString(e.getStackTrace()))
                     .asRuntimeException());
-            return;
+            e.printStackTrace();
         }
         responseObserver.onNext(response.build());
         responseObserver.onCompleted();

@@ -13,7 +13,6 @@ import com.google.common.util.concurrent.ListenableFuture;
 import lombok.extern.slf4j.Slf4j;
 import net.devh.boot.grpc.client.inject.GrpcClient;
 import org.checkerframework.checker.nullness.compatqual.NullableDecl;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -35,9 +34,13 @@ public class OrderService {
     @GrpcClient("order-service")
     InventoryServiceGrpc.InventoryServiceFutureStub futureStub;
 
-    @Autowired
-    OrderRepository orderRepository;
+    private final OrderRepository orderRepository;
     final ExecutorService executor = Executors.newCachedThreadPool();
+
+    public OrderService(OrderRepository orderRepository) {
+        this.orderRepository = orderRepository;
+    }
+
 
     public Mono<Object> createOrder(Order createOrderReq) {
         orderRepository.save(createOrderReq).subscribe();
@@ -84,7 +87,8 @@ public class OrderService {
                         }
 
                     }, executor);
-                }).retryWhen(Retry.backoff(3, Duration.ofSeconds(3))
+                })
+                .retryWhen(Retry.backoff(3, Duration.ofSeconds(3))
                         .doAfterRetry(signal -> log.info("Retry Attempt {}. Status: {}",
                                 signal.totalRetries() + 1, signal.failure().getMessage()))
                         .onRetryExhaustedThrow((retryBackoffSpec, retrySignal) -> retrySignal.failure()))
