@@ -2,40 +2,38 @@ syntax = "proto3";
 option java_multiple_files = true;
 package com.acuver.kpl.inventory_components;
 
-// Inventory Service
+message InventoryRequest {
+  string productId = 1;
+  string productName = 2;
+  int32 qty = 3;
+}
+
+enum InventoryAddStatus {
+  FAILED = 0;
+  SUCCESS = 1;
+}
+
+message InventoryAddResponse {
+  InventoryAddStatus status = 1;
+}
+
+message InventoryFetch {
+  repeated string ids = 1;
+}
+
+message InventoryResponse {
+  string productId = 1;
+  string productDesc = 2;
+  int32 availableQty = 3;
+  int32 reservedQty = 4;
+  string message = 5;
+}
+
+
 
 service InventoryService {
-  rpc ReserveInventory(ReserveInventoryRequest) returns (ReserveInventoryListResponse);
-  rpc fetchInventoryStatus (Empty) returns (stream InventoryStatus);
+  rpc addInventory(InventoryRequest) returns (InventoryAddResponse);
+  rpc addMultipleInventory( stream InventoryRequest) returns (InventoryAddResponse);
+  rpc addStreamInventoryUpdate (stream InventoryRequest) returns (stream InventoryAddResponse);
+  rpc fetchInventory(InventoryFetch) returns (stream InventoryResponse);
 }
-
-// models for reserveInventory
-
-message ReserveInventoryRequest {
-  repeated ReserveInventory inventory = 1;
-}
-
-message ReserveInventory {
-  string productId = 1;
-  string orderId = 2;
-  int32 quantity = 3;
-}
-
-message ReserveInventoryListResponse {
-  repeated ReserveInventoryResponse invResponse = 1;
-}
-
-message ReserveInventoryResponse {
-  string productId = 1;
-  bool success = 2;
-  string orderId = 3;
-}
-
-// models for fetchInventoryStatus
-
-message InventoryStatus {
-  string productId = 1;
-  int32 availableQuantity = 2;
-}
-
-message Empty {}

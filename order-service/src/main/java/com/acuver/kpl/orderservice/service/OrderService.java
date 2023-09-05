@@ -1,9 +1,6 @@
 package com.acuver.kpl.orderservice.service;
 
-import com.acuver.kpl.inventory_components.InventoryServiceGrpc;
-import com.acuver.kpl.inventory_components.ReserveInventory;
-import com.acuver.kpl.inventory_components.ReserveInventoryListResponse;
-import com.acuver.kpl.inventory_components.ReserveInventoryRequest;
+import com.acuver.kpl.inventory_components.*;
 import com.acuver.kpl.orderservice.model.CreateOrderResponse;
 import com.acuver.kpl.orderservice.model.Order;
 import com.acuver.kpl.orderservice.repository.OrderRepository;
@@ -33,7 +30,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class OrderService {
 
     @GrpcClient("order-service")
-    InventoryServiceGrpc.InventoryServiceFutureStub futureStub;
+    ReservationServiceGrpc.ReservationServiceFutureStub futureStub;
 
     @Autowired
     OrderRepository orderRepository;
