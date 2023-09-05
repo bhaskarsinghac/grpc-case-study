@@ -8,17 +8,43 @@ message InventoryRequest {
   int32 qty = 3;
 }
 
+message InventoryListRequest {
+  repeated InventoryRequest items = 1;
+}
+
 enum InventoryAddStatus {
   FAILED = 0;
-  SUCCESS = 1;
+  CREATED = 1;
+  UPDATED =2;
 }
 
 message InventoryAddResponse {
-  InventoryAddStatus status = 1;
+  string productId = 1;
+  InventoryAddStatus status = 2;
+}
+
+message AddQtyRequest {
+  string productId = 1;
+  int32 qty = 2;
+}
+
+message AddQtyResponse {
+  string  message = 1;
 }
 
 message InventoryFetch {
   repeated string ids = 1;
+}
+
+message InventoryFetchResponse {
+  oneof response {
+    InventoryResponse details = 1;
+    NotFoundResponse error = 2;
+  }
+}
+
+message NotFoundResponse {
+  string message = 1;
 }
 
 message InventoryResponse {
@@ -26,14 +52,20 @@ message InventoryResponse {
   string productDesc = 2;
   int32 availableQty = 3;
   int32 reservedQty = 4;
-  string message = 5;
 }
 
 
 
 service InventoryService {
+  //UNARY: to add single inventory
   rpc addInventory(InventoryRequest) returns (InventoryAddResponse);
-  rpc addMultipleInventory( stream InventoryRequest) returns (InventoryAddResponse);
+
+  //CLIENT STREAMING : accept multiple update quantity request and give final count
+  rpc updateQty( stream AddQtyRequest) returns (AddQtyResponse);
+
+  //SERVER STREAMING: accept list of ids and send their response one by one
+  rpc fetchInventory(InventoryFetch) returns (stream InventoryFetchResponse);
+
+  //BI-DI STREAMING: accept the add inventory record and respond with the status
   rpc addStreamInventoryUpdate (stream InventoryRequest) returns (stream InventoryAddResponse);
-  rpc fetchInventory(InventoryFetch) returns (stream InventoryResponse);
 }
