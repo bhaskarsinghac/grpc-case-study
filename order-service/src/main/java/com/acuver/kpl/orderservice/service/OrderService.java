@@ -7,6 +7,7 @@ import com.acuver.kpl.orderservice.repository.OrderRepository;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import lombok.extern.slf4j.Slf4j;
 import net.devh.boot.grpc.client.inject.GrpcClient;
 import org.checkerframework.checker.nullness.compatqual.NullableDecl;
@@ -38,7 +39,7 @@ public class OrderService {
         this.orderRepository = orderRepository;
     }
 
-
+    @CircuitBreaker(name = "defaultCircuitBreaker", fallbackMethod = "circuitBreakerFallback")
     public Mono<Object> createOrder(Order createOrderReq) {
         orderRepository.save(createOrderReq).subscribe();
 
@@ -52,7 +53,6 @@ public class OrderService {
             invReserveReqBuilder.addInventory(orderLineObj);
         }
         var invReserveReq = invReserveReqBuilder.build();
-
 
         return Mono.create(monoSink -> {
 
@@ -127,6 +127,14 @@ public class OrderService {
             createOrderReq.setStatus("CANCELLED");
         }
         monoSink.success(res);
+    }
+
+    public Mono<Object> circuitBreakerFallback( Throwable t) {
+        // Handle the fallback behavior when the Circuit Breaker is open
+        log.error("Circuit Breaker is open. Fallback behavior triggered: {}", t.getMessage());
+
+        // Implement your custom fallback logic here, e.g., return an error response.
+        return Mono.error(new Exception("Service is temporarily unavailable. Please try again later."));
     }
 
     private void handleError(MonoSink<Object> monoSink, Exception e) {
